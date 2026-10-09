@@ -123,7 +123,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                           Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
-                              color: Colors.black.withOpacity(0.35),
+                              color: Colors.black.withValues(alpha: 0.35),
                             ),
                           ),
                           const Positioned(

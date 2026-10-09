@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -10,7 +11,7 @@ void main() {
 }
 
 class MusicNovaApp extends StatelessWidget {
-  const MusicNovaApp({Key? key}) : super(key: key);
+  const MusicNovaApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +46,7 @@ class MusicItem {
 }
 
 class NavigationScreen extends StatefulWidget {
-  const NavigationScreen({Key? key}) : super(key: key);
+  const NavigationScreen({super.key});
 
   @override
   State<NavigationScreen> createState() => _NavigationScreenState();
@@ -85,7 +86,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
       String streamUrl = '';
 
       if (kIsWeb) {
-        final url = Uri.parse('https://pipedapi.kavin.rocks/streams/${song.id}');
+        final url = Uri.parse(
+          'https://pipedapi.kavin.rocks/streams/${song.id}',
+        );
         final res = await http.get(url);
         if (res.statusCode == 200) {
           final data = json.decode(res.body);
@@ -115,9 +118,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoadingAudio = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al reproducir: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error al reproducir: $e')));
       }
     }
   }
@@ -133,7 +135,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
   void _addToHistory(String query) {
     if (query.trim().isEmpty) return;
     setState(() {
-      _searchHistory.removeWhere((item) => item.toLowerCase() == query.toLowerCase());
+      _searchHistory.removeWhere(
+        (item) => item.toLowerCase() == query.toLowerCase(),
+      );
       _searchHistory.insert(0, query);
     });
   }
@@ -187,7 +191,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
           if (_currentSong != null)
             Container(
               color: const Color(0xFF282828),
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
               child: Row(
                 children: [
                   Image.network(
@@ -209,13 +216,18 @@ class _NavigationScreenState extends State<NavigationScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.bold),
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Text(
                           _currentSong!.author,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.grey, fontSize: 12),
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -253,7 +265,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
-          BottomNavigationBarItem(icon: Icon(Icons.library_music), label: 'Biblioteca'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.library_music),
+            label: 'Biblioteca',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Cuenta'),
         ],
       ),
@@ -261,25 +276,37 @@ class _NavigationScreenState extends State<NavigationScreen> {
   }
 }
 
-Future<List<MusicItem>> fetchMusicSearchResults(String query, YoutubeExplode yt) async {
+Future<List<MusicItem>> fetchMusicSearchResults(
+  String query,
+  YoutubeExplode yt,
+) async {
   if (kIsWeb) {
     try {
-      final url = Uri.parse('https://pipedapi.kavin.rocks/search?q=$query&filter=music_songs');
+      final url = Uri.parse(
+        'https://pipedapi.kavin.rocks/search?q=$query&filter=music_songs',
+      );
       final res = await http.get(url);
       if (res.statusCode == 200) {
         final data = json.decode(res.body);
         final items = data['items'] as List?;
         if (items != null) {
-          return items.map((item) {
-            final urlStr = item['url'] ?? '';
-            final videoId = urlStr.contains('v=') ? urlStr.split('v=').last : '';
-            return MusicItem(
-              id: videoId,
-              title: item['title'] ?? 'Sin título',
-              author: item['uploaderName'] ?? 'Artista',
-              thumbnailUrl: item['thumbnail'] ?? 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
-            );
-          }).where((song) => song.id.isNotEmpty).toList();
+          return items
+              .map((item) {
+                final urlStr = item['url'] ?? '';
+                final videoId = urlStr.contains('v=')
+                    ? urlStr.split('v=').last
+                    : '';
+                return MusicItem(
+                  id: videoId,
+                  title: item['title'] ?? 'Sin título',
+                  author: item['uploaderName'] ?? 'Artista',
+                  thumbnailUrl:
+                      item['thumbnail'] ??
+                      'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+                );
+              })
+              .where((song) => song.id.isNotEmpty)
+              .toList();
         }
       }
     } catch (_) {}
@@ -304,13 +331,13 @@ class HomeScreen extends StatefulWidget {
   final VoidCallback onTogglePlayPause;
 
   const HomeScreen({
-    Key? key,
+    super.key,
     required this.yt,
     required this.currentSong,
     required this.isPlaying,
     required this.onPlaySong,
     required this.onTogglePlayPause,
-  }) : super(key: key);
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -328,7 +355,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadFeaturedSongs() async {
     try {
-      final results = await fetchMusicSearchResults('YouTube Music Hits', widget.yt);
+      final results = await fetchMusicSearchResults(
+        'YouTube Music Hits',
+        widget.yt,
+      );
       if (mounted) {
         setState(() {
           _featuredList = results;
@@ -378,7 +408,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: isSelected ? Colors.purpleAccent : Colors.white,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 ),
                 subtitle: Text(
@@ -420,7 +452,7 @@ class SearchScreen extends StatefulWidget {
   final Function(String) onRemoveFromHistory;
 
   const SearchScreen({
-    Key? key,
+    super.key,
     required this.yt,
     required this.currentSong,
     required this.isPlaying,
@@ -429,7 +461,7 @@ class SearchScreen extends StatefulWidget {
     required this.searchHistory,
     required this.onAddToHistory,
     required this.onRemoveFromHistory,
-  }) : super(key: key);
+  });
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -544,8 +576,12 @@ class _SearchScreenState extends State<SearchScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: isSelected ? Colors.purpleAccent : Colors.white,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected
+                                ? Colors.purpleAccent
+                                : Colors.white,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                         ),
                         subtitle: Text(
@@ -580,7 +616,7 @@ class _SearchScreenState extends State<SearchScreen> {
 }
 
 class LibraryScreen extends StatelessWidget {
-  const LibraryScreen({Key? key}) : super(key: key);
+  const LibraryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -591,7 +627,7 @@ class LibraryScreen extends StatelessWidget {
 }
 
 class AccountScreen extends StatelessWidget {
-  const AccountScreen({Key? key}) : super(key: key);
+  const AccountScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
