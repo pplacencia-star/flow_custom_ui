@@ -81,20 +81,36 @@ class _NavigationScreenState extends State<NavigationScreen> {
       if (mounted) setState(() => _isLoadingAudio = true);
       String streamUrl = '';
 
-      // Intento 1: Piped API (Servidor proxy para saltar bloqueo de YouTube)
-      try {
-        final url = Uri.parse(
-          'https://pipedapi.kavin.rocks/streams/${song.id}',
-        );
-        final res = await http.get(url).timeout(const Duration(seconds: 5));
-        if (res.statusCode == 200) {
-          final data = json.decode(res.body);
-          final audioStreams = data['audioStreams'] as List?;
-          if (audioStreams != null && audioStreams.isNotEmpty) {
-            streamUrl = audioStreams.first['url'] ?? '';
+      // Lista de instancias de proxy públicas (Piped / Invidious)
+      final instances = [
+        'https://pipedapi.kavin.rocks',
+        'https://api.piped.privacydev.net',
+        'https://pipedapi.palvelu.org',
+        'https://inv.tux.im',
+      ];
+
+      // Intento 1: Probar cada instancia hasta que una devuelva la URL
+      for (final baseUrl in instances) {
+        try {
+          final url = Uri.parse('$baseUrl/streams/${song.id}');
+          final res = await http.get(url).timeout(const Duration(seconds: 4));
+          if (res.statusCode == 200) {
+            final data = json.decode(res.body);
+            final audioStreams = data['audioStreams'] as List?;
+            if (audioStreams != null && audioStreams.isNotEmpty) {
+              // Filtrar preferentemente por m4a/aac (mejor compatibilidad con Android)
+              final bestAudio = audioStreams.firstWhere(
+                (s) => (s['mimeType'] ?? '').toString().contains('audio/mp4'),
+                orElse: () => audioStreams.first,
+              );
+              streamUrl = bestAudio['url'] ?? '';
+              if (streamUrl.isNotEmpty) break;
+            }
           }
+        } catch (_) {
+          continue; // Si falla o aborta la conexión, probar la siguiente instancia
         }
-      } catch (_) {}
+      }
 
       // Intento 2: Respaldo con YoutubeExplode
       if (streamUrl.isEmpty) {
@@ -111,8 +127,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
         await _audioPlayer.setUrl(
           streamUrl,
           headers: {
-            'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           },
         );
         await _audioPlayer.play();
