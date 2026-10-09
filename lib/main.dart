@@ -78,22 +78,77 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
   Future<void> _playSong(MusicItem song) async {
     try {
-      if (mounted) setState(() => _isLoadingAudio = true);
+      if (mounted) {
+        setState(() {
+          _currentSong = song;
+          _isLoadingAudio = true;
+        });
+      }
 
       await _audioPlayer.stop();
 
-      // Extracción directa de YouTube usando cliente de YouTube Music / Web
-      final manifest = await _yt.videos.streamsClient.getManifest(
-        song.id,
-        ytClients: [YoutubeApiClient.mweb, YoutubeApiClient.android],
-      );
+      String streamUrl = '';
 
-      // Obtener el stream de audio solo con bitrate alto
-      final audioStreamInfo = manifest.audioOnly.withHighestBitrate();
-      final streamUrl = audioStreamInfo.url.toString();
+      // Intento 1: Extracción directa mediante YouTube Explode (mweb)
+      try {
+        final manifest = await _yt.videos.streamsClient.getManifest(
+          song.id,
+          ytClients: [YoutubeApiClient.mweb, YoutubeApiClient.android],
+        );
+
+        final audioStreamInfo = manifest.audioOnly.withHighestBitrate();
+        streamUrl = audioStreamInfo.url.toString();
+      } catch (_) {
+        // Silenciar error del Intento 1 para continuar al respaldo
+      }
+
+      // Intento 2: Respaldo vía instancias Proxy públicas de Invidious / Piped
+      if (streamUrl.isEmpty) {
+        final fallbackEndpoints = [
+          'https://inv.privacydev.net/api/v1/videos/${song.id}',
+          'https://invidious.drgns.space/api/v1/videos/${song.id}',
+          'https://pipedapi.mha.fi/streams/${song.id}',
+        ];
+
+        for (final endpoint in fallbackEndpoints) {
+          try {
+            final res = await http
+                .get(Uri.parse(endpoint))
+                .timeout(const Duration(seconds: 4));
+
+            if (res.statusCode == 200) {
+              final data = json.decode(res.body);
+
+              // Estructura Piped
+              if (data is Map && data.containsKey('audioStreams')) {
+                final audioStreams = data['audioStreams'] as List?;
+                if (audioStreams != null && audioStreams.isNotEmpty) {
+                  streamUrl = audioStreams.first['url'] ?? '';
+                  if (streamUrl.isNotEmpty) break;
+                }
+              }
+              // Estructura Invidious
+              else if (data is Map && data.containsKey('adaptiveFormats')) {
+                final formats = data['adaptiveFormats'] as List?;
+                if (formats != null) {
+                  final audio = formats.firstWhere(
+                    (f) => (f['type'] ?? '').toString().startsWith('audio/'),
+                    orElse: () => null,
+                  );
+                  if (audio != null) {
+                    streamUrl = audio['url'] ?? '';
+                    if (streamUrl.isNotEmpty) break;
+                  }
+                }
+              }
+            }
+          } catch (_) {
+            continue;
+          }
+        }
+      }
 
       if (streamUrl.isNotEmpty) {
-        // Enviar cabeceras completas para autenticar la conexión con YouTube Music
         await _audioPlayer.setUrl(
           streamUrl,
           headers: {
@@ -112,7 +167,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
           });
         }
       } else {
-        throw Exception("No se pudo obtener el stream directo.");
+        throw Exception("No se pudo obtener el enlace de reproducción.");
       }
     } catch (e) {
       if (mounted) {
