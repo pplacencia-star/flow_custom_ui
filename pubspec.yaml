@@ -34,7 +34,8 @@ dependencies:
   just_audio: ^0.9.36          # Reproduce el stream de audio en tiempo real en Android/Web[cite: 5]
   http: ^1.2.0
   youtube_player_flutter: ^9.0.0
-  
+  flutter_inappwebview: ^6.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
