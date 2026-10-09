@@ -1,620 +1,181 @@
-import 'dart:convert';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:youtube_explode_dart/youtube_explode_dart.dart';
-import 'package:youtube_player_iframe/youtube_player_iframe.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-void main() {
-  runApp(const MusicNovaApp());
+import 'firebase_options.dart';
+import 'screens/main_navigation.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializa Firebase con las opciones generadas por CLI
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  runApp(const MyApp());
 }
 
-class MusicNovaApp extends StatelessWidget {
-  const MusicNovaApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Music-Nova',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        primaryColor: Colors.deepPurple,
-        scaffoldBackgroundColor: const Color(0xFF121212),
-        colorScheme: const ColorScheme.dark(
-          primary: Colors.deepPurpleAccent,
-          secondary: Colors.purpleAccent,
-        ),
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF0D0B14),
+        primaryColor: const Color(0xFFD500F9),
       ),
-      home: const NavigationScreen(),
-    );
-  }
-}
-
-class MusicItem {
-  final String id;
-  final String title;
-  final String author;
-  final String thumbnailUrl;
-
-  MusicItem({
-    required this.id,
-    required this.title,
-    required this.author,
-    required this.thumbnailUrl,
-  });
-}
-
-class NavigationScreen extends StatefulWidget {
-  const NavigationScreen({super.key});
-
-  @override
-  State<NavigationScreen> createState() => _NavigationScreenState();
-}
-
-class _NavigationScreenState extends State<NavigationScreen> {
-  int _currentIndex = 0;
-
-  final YoutubeExplode _yt = YoutubeExplode();
-  late YoutubePlayerController _ytController;
-
-  MusicItem? _currentSong;
-  bool _isPlaying = false;
-  bool _isLoadingAudio = false;
-
-  final List<String> _searchHistory = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _ytController = YoutubePlayerController.fromVideoId(
-      videoId: '',
-      autoPlay: true,
-      params: const YoutubePlayerParams(
-        showControls: false,
-        showFullscreenButton: false,
-        mute: false,
-      ),
-    );
-
-    _ytController.stream.listen((event) {
-      if (mounted) {
-        setState(() {
-          _isPlaying = event.playerState == PlayerState.playing;
-          if (event.playerState == PlayerState.playing ||
-              event.playerState == PlayerState.paused) {
-            _isLoadingAudio = false;
+      // Escucha el estado de la autenticación en tiempo real
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          // Si el usuario está autenticado, va a la navegación principal
+          if (snapshot.hasData) {
+            return const MainNavigation();
           }
-        });
-      }
-    });
+          // Si no está autenticado, muestra la pantalla de Login/Registro
+          return const AuthWrapper();
+        },
+      ),
+    );
   }
+}
 
-  void _playSong(MusicItem song) {
-    if (mounted) {
+// Widget provisional para pantalla de autenticación si no está iniciada la sesión
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isLogin = true;
+  String _errorMessage = '';
+
+  Future<void> _submitAuth() async {
+    setState(() => _errorMessage = '');
+    try {
+      if (_isLogin) {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+      } else {
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
       setState(() {
-        _currentSong = song;
-        _isLoadingAudio = true;
+        _errorMessage = e.message ?? 'Ocurrió un error al autenticar';
       });
     }
-
-    _ytController.loadVideoById(videoId: song.id);
-  }
-
-  void _togglePlayPause() {
-    if (_isPlaying) {
-      _ytController.pauseVideo();
-    } else {
-      _ytController.playVideo();
-    }
-  }
-
-  void _addToHistory(String query) {
-    if (query.trim().isEmpty) return;
-    setState(() {
-      _searchHistory.removeWhere(
-        (item) => item.toLowerCase() == query.toLowerCase(),
-      );
-      _searchHistory.insert(0, query);
-    });
-  }
-
-  void _removeFromHistory(String query) {
-    setState(() {
-      _searchHistory.remove(query);
-    });
-  }
-
-  @override
-  void dispose() {
-    _yt.close();
-    _ytController.close();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> screens = [
-      HomeScreen(
-        yt: _yt,
-        currentSong: _currentSong,
-        isPlaying: _isPlaying,
-        onPlaySong: _playSong,
-        onTogglePlayPause: _togglePlayPause,
-      ),
-      SearchScreen(
-        yt: _yt,
-        currentSong: _currentSong,
-        isPlaying: _isPlaying,
-        onPlaySong: _playSong,
-        onTogglePlayPause: _togglePlayPause,
-        searchHistory: _searchHistory,
-        onAddToHistory: _addToHistory,
-        onRemoveFromHistory: _removeFromHistory,
-      ),
-      const LibraryScreen(),
-      const AccountScreen(),
-    ];
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Music-Nova'),
-        backgroundColor: Colors.deepPurple.shade900,
-        centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          SizedBox(
-            height: 1,
-            width: 1,
-            child: YoutubePlayer(controller: _ytController),
-          ),
-          Expanded(child: screens[_currentIndex]),
-          if (_currentSong != null)
-            Container(
-              color: const Color(0xFF282828),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
+      backgroundColor: const Color(0xFF0D0B14),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.music_note, size: 80, color: Color(0xFFD500F9)),
+              const SizedBox(height: 16),
+              const Text(
+                'Music-Nova',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
-              child: Row(
-                children: [
-                  Image.network(
-                    _currentSong!.thumbnailUrl,
-                    width: 45,
-                    height: 45,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const Icon(Icons.music_note, size: 40),
+              const SizedBox(height: 32),
+              TextField(
+                controller: _emailController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Correo Electrónico',
+                  labelStyle: const TextStyle(color: Colors.grey),
+                  prefixIcon: const Icon(Icons.email, color: Color(0xFFD500F9)),
+                  filled: true,
+                  fillColor: const Color(0xFF161224),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _currentSong!.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          _currentSong!.author,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Contraseña',
+                  labelStyle: const TextStyle(color: Colors.grey),
+                  prefixIcon: const Icon(Icons.lock, color: Color(0xFFD500F9)),
+                  filled: true,
+                  fillColor: const Color(0xFF161224),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              if (_errorMessage.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  _errorMessage,
+                  style: const TextStyle(color: Colors.redAccent),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD500F9),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  _isLoadingAudio
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : IconButton(
-                          icon: Icon(
-                            _isPlaying ? Icons.pause : Icons.play_arrow,
-                            color: Colors.white,
-                            size: 32,
-                          ),
-                          onPressed: _togglePlayPause,
-                        ),
-                ],
-              ),
-            ),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        selectedItemColor: Colors.purpleAccent,
-        unselectedItemColor: Colors.grey,
-        backgroundColor: const Color(0xFF1E1E1E),
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.library_music),
-            label: 'Biblioteca',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Cuenta'),
-        ],
-      ),
-    );
-  }
-}
-
-Future<List<MusicItem>> fetchMusicSearchResults(
-  String query,
-  YoutubeExplode yt,
-) async {
-  if (kIsWeb) {
-    try {
-      final url = Uri.parse(
-        'https://pipedapi.kavin.rocks/search?q=$query&filter=music_songs',
-      );
-      final res = await http.get(url);
-      if (res.statusCode == 200) {
-        final data = json.decode(res.body);
-        final items = data['items'] as List?;
-        if (items != null) {
-          return items
-              .map((item) {
-                final urlStr = item['url'] ?? '';
-                final videoId = urlStr.contains('v=')
-                    ? urlStr.split('v=').last
-                    : '';
-                return MusicItem(
-                  id: videoId,
-                  title: item['title'] ?? 'Sin título',
-                  author: item['uploaderName'] ?? 'Artista',
-                  thumbnailUrl:
-                      item['thumbnail'] ??
-                      'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
-                );
-              })
-              .where((song) => song.id.isNotEmpty)
-              .toList();
-        }
-      }
-    } catch (_) {}
-  }
-
-  final searchList = await yt.search.search('$query music');
-  return searchList.map((video) {
-    return MusicItem(
-      id: video.id.value,
-      title: video.title,
-      author: video.author,
-      thumbnailUrl: video.thumbnails.lowResUrl,
-    );
-  }).toList();
-}
-
-class HomeScreen extends StatefulWidget {
-  final YoutubeExplode yt;
-  final MusicItem? currentSong;
-  final bool isPlaying;
-  final Function(MusicItem) onPlaySong;
-  final VoidCallback onTogglePlayPause;
-
-  const HomeScreen({
-    super.key,
-    required this.yt,
-    required this.currentSong,
-    required this.isPlaying,
-    required this.onPlaySong,
-    required this.onTogglePlayPause,
-  });
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  List<MusicItem> _featuredList = [];
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadFeaturedSongs();
-  }
-
-  Future<void> _loadFeaturedSongs() async {
-    try {
-      final results = await fetchMusicSearchResults(
-        'YouTube Music Hits',
-        widget.yt,
-      );
-      if (mounted) {
-        setState(() {
-          _featuredList = results;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _isLoading
-        ? const Center(child: CircularProgressIndicator())
-        : ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            itemCount: _featuredList.length + 1,
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return const Padding(
-                  padding: EdgeInsets.all(16.0),
+                  onPressed: _submitAuth,
                   child: Text(
-                    'Recomendaciones para ti',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                );
-              }
-
-              final song = _featuredList[index - 1];
-              final isSelected = widget.currentSong?.id == song.id;
-
-              return ListTile(
-                leading: Image.network(
-                  song.thumbnailUrl,
-                  width: 50,
-                  height: 50,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.music_note, size: 40),
-                ),
-                title: Text(
-                  song.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: isSelected ? Colors.purpleAccent : Colors.white,
-                    fontWeight: isSelected
-                        ? FontWeight.bold
-                        : FontWeight.normal,
+                    _isLogin ? 'Iniciar Sesión' : 'Registrarse',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-                subtitle: Text(
-                  song.author,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              ),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _isLogin = !_isLogin;
+                  });
+                },
+                child: Text(
+                  _isLogin
+                      ? '¿No tienes cuenta? Regístrate aquí'
+                      : '¿Ya tienes cuenta? Inicia sesión',
                   style: const TextStyle(color: Colors.grey),
                 ),
-                trailing: IconButton(
-                  icon: Icon(
-                    isSelected && widget.isPlaying
-                        ? Icons.pause_circle_filled
-                        : Icons.play_circle_fill,
-                    color: Colors.purpleAccent,
-                    size: 36,
-                  ),
-                  onPressed: () {
-                    if (isSelected) {
-                      widget.onTogglePlayPause();
-                    } else {
-                      widget.onPlaySong(song);
-                    }
-                  },
-                ),
-              );
-            },
-          );
-  }
-}
-
-class SearchScreen extends StatefulWidget {
-  final YoutubeExplode yt;
-  final MusicItem? currentSong;
-  final bool isPlaying;
-  final Function(MusicItem) onPlaySong;
-  final VoidCallback onTogglePlayPause;
-  final List<String> searchHistory;
-  final Function(String) onAddToHistory;
-  final Function(String) onRemoveFromHistory;
-
-  const SearchScreen({
-    super.key,
-    required this.yt,
-    required this.currentSong,
-    required this.isPlaying,
-    required this.onPlaySong,
-    required this.onTogglePlayPause,
-    required this.searchHistory,
-    required this.onAddToHistory,
-    required this.onRemoveFromHistory,
-  });
-
-  @override
-  State<SearchScreen> createState() => _SearchScreenState();
-}
-
-class _SearchScreenState extends State<SearchScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  List<MusicItem> _searchResults = [];
-  bool _isSearching = false;
-  bool _hasSearched = false;
-
-  Future<void> _performSearch(String query) async {
-    if (query.trim().isEmpty) return;
-
-    widget.onAddToHistory(query);
-    _searchController.text = query;
-
-    setState(() {
-      _isSearching = true;
-      _hasSearched = true;
-    });
-
-    try {
-      final results = await fetchMusicSearchResults(query, widget.yt);
-      if (mounted) {
-        setState(() {
-          _searchResults = results;
-          _isSearching = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isSearching = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Buscar canciones o artistas...',
-              prefixIcon: const Icon(Icons.search, color: Colors.purpleAccent),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.send, color: Colors.purpleAccent),
-                onPressed: () => _performSearch(_searchController.text),
               ),
-              filled: true,
-              fillColor: const Color(0xFF1E1E1E),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30.0),
-                borderSide: BorderSide.none,
-              ),
-            ),
-            onSubmitted: _performSearch,
+            ],
           ),
         ),
-        if (!_hasSearched && widget.searchHistory.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Búsquedas Recientes',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: widget.searchHistory.length,
-              itemBuilder: (context, index) {
-                final term = widget.searchHistory[index];
-                return ListTile(
-                  leading: const Icon(Icons.history, color: Colors.grey),
-                  title: Text(term),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.close, size: 20, color: Colors.grey),
-                    onPressed: () => widget.onRemoveFromHistory(term),
-                  ),
-                  onTap: () => _performSearch(term),
-                );
-              },
-            ),
-          ),
-        ] else
-          Expanded(
-            child: _isSearching
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    itemCount: _searchResults.length,
-                    itemBuilder: (context, index) {
-                      final song = _searchResults[index];
-                      final isSelected = widget.currentSong?.id == song.id;
-
-                      return ListTile(
-                        leading: Image.network(
-                          song.thumbnailUrl,
-                          width: 50,
-                          height: 50,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.music_note, size: 40),
-                        ),
-                        title: Text(
-                          song.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: isSelected
-                                ? Colors.purpleAccent
-                                : Colors.white,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                        ),
-                        subtitle: Text(
-                          song.author,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                        trailing: IconButton(
-                          icon: Icon(
-                            isSelected && widget.isPlaying
-                                ? Icons.pause_circle_filled
-                                : Icons.play_circle_fill,
-                            color: Colors.purpleAccent,
-                            size: 36,
-                          ),
-                          onPressed: () {
-                            if (isSelected) {
-                              widget.onTogglePlayPause();
-                            } else {
-                              widget.onPlaySong(song);
-                            }
-                          },
-                        ),
-                      );
-                    },
-                  ),
-          ),
-      ],
-    );
-  }
-}
-
-class LibraryScreen extends StatelessWidget {
-  const LibraryScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Tu Biblioteca', style: TextStyle(fontSize: 18)),
-    );
-  }
-}
-
-class AccountScreen extends StatelessWidget {
-  const AccountScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Perfil de Usuario', style: TextStyle(fontSize: 18)),
+      ),
     );
   }
 }
