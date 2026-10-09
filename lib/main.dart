@@ -80,30 +80,26 @@ class _NavigationScreenState extends State<NavigationScreen> {
     try {
       if (mounted) setState(() => _isLoadingAudio = true);
 
-      // Detener cualquier reproducción previa
       await _audioPlayer.stop();
 
-      // Extracción directa de YouTube usando cliente oficial configurado
-      var manifest = await _yt.videos.streamsClient.getManifest(
+      // Extracción directa de YouTube usando cliente de YouTube Music / Web
+      final manifest = await _yt.videos.streamsClient.getManifest(
         song.id,
-        ytClients: [
-          YoutubeApiClient.android,
-          YoutubeApiClient.androidVr,
-          YoutubeApiClient.ios,
-        ],
+        ytClients: [YoutubeApiClient.mweb, YoutubeApiClient.android],
       );
 
-      // Obtener el stream de audio con mayor calidad
-      var audioStreamInfo = manifest.audioOnly.withHighestBitrate();
-      String streamUrl = audioStreamInfo.url.toString();
+      // Obtener el stream de audio solo con bitrate alto
+      final audioStreamInfo = manifest.audioOnly.withHighestBitrate();
+      final streamUrl = audioStreamInfo.url.toString();
 
       if (streamUrl.isNotEmpty) {
-        // Asignar la URL pasando las cabeceras exactas que exige YouTube
+        // Enviar cabeceras completas para autenticar la conexión con YouTube Music
         await _audioPlayer.setUrl(
           streamUrl,
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
-            'Referer': 'https://www.youtube.com/',
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+            'Origin': 'https://music.youtube.com',
+            'Referer': 'https://music.youtube.com/',
           },
         );
 
@@ -116,7 +112,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
           });
         }
       } else {
-        throw Exception("No se encontró stream de audio válido.");
+        throw Exception("No se pudo obtener el stream directo.");
       }
     } catch (e) {
       if (mounted) {
