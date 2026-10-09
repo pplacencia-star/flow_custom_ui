@@ -81,45 +81,49 @@ class _NavigationScreenState extends State<NavigationScreen> {
       if (mounted) setState(() => _isLoadingAudio = true);
       String streamUrl = '';
 
-      // Lista de instancias de proxy públicas (Piped / Invidious)
-      final instances = [
-        'https://pipedapi.kavin.rocks',
-        'https://api.piped.privacydev.net',
-        'https://pipedapi.palvelu.org',
-        'https://inv.tux.im',
+      // Lista de servidores de extracción alternativos (Invidious + Piped + Cobalt)
+      final sources = [
+        'https://pipedapi.kavin.rocks/streams/${song.id}',
+        'https://api.piped.privacydev.net/streams/${song.id}',
+        'https://inv.riverside.rocks/api/v1/videos/${song.id}',
+        'https://invidious.nerqv.de/api/v1/videos/${song.id}',
       ];
 
-      // Intento 1: Probar cada instancia hasta que una devuelva la URL
-      for (final baseUrl in instances) {
+      for (final endpoint in sources) {
         try {
-          final url = Uri.parse('$baseUrl/streams/${song.id}');
-          final res = await http.get(url).timeout(const Duration(seconds: 4));
+          final res = await http
+              .get(Uri.parse(endpoint))
+              .timeout(const Duration(seconds: 3));
+
           if (res.statusCode == 200) {
             final data = json.decode(res.body);
-            final audioStreams = data['audioStreams'] as List?;
-            if (audioStreams != null && audioStreams.isNotEmpty) {
-              // Filtrar preferentemente por m4a/aac (mejor compatibilidad con Android)
-              final bestAudio = audioStreams.firstWhere(
-                (s) => (s['mimeType'] ?? '').toString().contains('audio/mp4'),
-                orElse: () => audioStreams.first,
-              );
-              streamUrl = bestAudio['url'] ?? '';
-              if (streamUrl.isNotEmpty) break;
+
+            // Estructura Piped
+            if (data is Map && data.containsKey('audioStreams')) {
+              final audioStreams = data['audioStreams'] as List?;
+              if (audioStreams != null && audioStreams.isNotEmpty) {
+                streamUrl = audioStreams.first['url'] ?? '';
+                if (streamUrl.isNotEmpty) break;
+              }
+            }
+            // Estructura Invidious
+            else if (data is Map && data.containsKey('adaptiveFormats')) {
+              final formats = data['adaptiveFormats'] as List?;
+              if (formats != null) {
+                final audio = formats.firstWhere(
+                  (f) => (f['type'] ?? '').toString().startsWith('audio/'),
+                  orElse: () => null,
+                );
+                if (audio != null) {
+                  streamUrl = audio['url'] ?? '';
+                  if (streamUrl.isNotEmpty) break;
+                }
+              }
             }
           }
         } catch (_) {
-          continue; // Si falla o aborta la conexión, probar la siguiente instancia
+          continue; // Si falla o se agota el tiempo, salta al siguiente servidor
         }
-      }
-
-      // Intento 2: Respaldo con YoutubeExplode
-      if (streamUrl.isEmpty) {
-        final manifest = await _yt.videos.streamsClient.getManifest(
-          song.id,
-          ytClients: [YoutubeApiClient.android, YoutubeApiClient.androidVr],
-        );
-        final audioStreamInfo = manifest.audioOnly.withHighestBitrate();
-        streamUrl = audioStreamInfo.url.toString();
       }
 
       if (streamUrl.isNotEmpty) {
@@ -138,7 +142,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
           });
         }
       } else {
-        throw Exception("No se pudo obtener el stream de audio.");
+        throw Exception(
+          "Servidores ocupados. Por favor, reintenta en unos segundos.",
+        );
       }
     } catch (e) {
       if (mounted) {
