@@ -67,7 +67,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
   @override
   void initState() {
     super.initState();
-    _ytController = YoutubePlayerController(
+    _ytController = YoutubePlayerController.fromVideoId(
+      videoId: '',
+      autoPlay: true,
       params: const YoutubePlayerParams(
         showControls: false,
         showFullscreenButton: false,
@@ -162,8 +164,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
       ),
       body: Column(
         children: [
-          Offstage(
-            offstage: true,
+          SizedBox(
+            height: 1,
+            width: 1,
             child: YoutubePlayer(controller: _ytController),
           ),
           Expanded(child: screens[_currentIndex]),
