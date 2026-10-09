@@ -79,62 +79,36 @@ class _NavigationScreenState extends State<NavigationScreen> {
   Future<void> _playSong(MusicItem song) async {
     try {
       if (mounted) setState(() => _isLoadingAudio = true);
-      String streamUrl = '';
 
-      // Lista de servidores de extracción alternativos (Invidious + Piped + Cobalt)
-      final sources = [
-        'https://pipedapi.kavin.rocks/streams/${song.id}',
-        'https://api.piped.privacydev.net/streams/${song.id}',
-        'https://inv.riverside.rocks/api/v1/videos/${song.id}',
-        'https://invidious.nerqv.de/api/v1/videos/${song.id}',
-      ];
+      // Detener cualquier reproducción previa
+      await _audioPlayer.stop();
 
-      for (final endpoint in sources) {
-        try {
-          final res = await http
-              .get(Uri.parse(endpoint))
-              .timeout(const Duration(seconds: 3));
+      // Extracción directa de YouTube usando cliente oficial configurado
+      var manifest = await _yt.videos.streamsClient.getManifest(
+        song.id,
+        ytClients: [
+          YoutubeApiClient.android,
+          YoutubeApiClient.androidVr,
+          YoutubeApiClient.ios,
+        ],
+      );
 
-          if (res.statusCode == 200) {
-            final data = json.decode(res.body);
-
-            // Estructura Piped
-            if (data is Map && data.containsKey('audioStreams')) {
-              final audioStreams = data['audioStreams'] as List?;
-              if (audioStreams != null && audioStreams.isNotEmpty) {
-                streamUrl = audioStreams.first['url'] ?? '';
-                if (streamUrl.isNotEmpty) break;
-              }
-            }
-            // Estructura Invidious
-            else if (data is Map && data.containsKey('adaptiveFormats')) {
-              final formats = data['adaptiveFormats'] as List?;
-              if (formats != null) {
-                final audio = formats.firstWhere(
-                  (f) => (f['type'] ?? '').toString().startsWith('audio/'),
-                  orElse: () => null,
-                );
-                if (audio != null) {
-                  streamUrl = audio['url'] ?? '';
-                  if (streamUrl.isNotEmpty) break;
-                }
-              }
-            }
-          }
-        } catch (_) {
-          continue; // Si falla o se agota el tiempo, salta al siguiente servidor
-        }
-      }
+      // Obtener el stream de audio con mayor calidad
+      var audioStreamInfo = manifest.audioOnly.withHighestBitrate();
+      String streamUrl = audioStreamInfo.url.toString();
 
       if (streamUrl.isNotEmpty) {
-        await _audioPlayer.stop();
+        // Asignar la URL pasando las cabeceras exactas que exige YouTube
         await _audioPlayer.setUrl(
           streamUrl,
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
+            'Referer': 'https://www.youtube.com/',
           },
         );
+
         await _audioPlayer.play();
+
         if (mounted) {
           setState(() {
             _isLoadingAudio = false;
@@ -142,15 +116,17 @@ class _NavigationScreenState extends State<NavigationScreen> {
           });
         }
       } else {
-        throw Exception(
-          "Servidores ocupados. Por favor, reintenta en unos segundos.",
-        );
+        throw Exception("No se encontró stream de audio válido.");
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoadingAudio = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error al reproducir: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al reproducir: $e'),
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     }
   }
