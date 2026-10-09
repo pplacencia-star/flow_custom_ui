@@ -30,9 +30,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  youtube_explode_dart: ^2.3.4 # Extrae el stream de audio directo de YouTube/YouTube Music
-  just_audio: ^0.9.36          # Reproduce el stream de audio en tiempo real en Android/Web
-
+  youtube_explode_dart: ^2.3.4 # Extrae el stream de audio directo de YouTube/YouTube Music[cite: 5]
+  just_audio: ^0.9.36          # Reproduce el stream de audio en tiempo real en Android/Web[cite: 5]
+  http: ^1.2.0
+  youtube_player_flutter: ^9.0.0
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter

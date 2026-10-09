@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
-import 'package:just_audio/just_audio.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 void main() {
   runApp(const MusicNovaApp());
@@ -56,7 +56,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
   int _currentIndex = 0;
 
   final YoutubeExplode _yt = YoutubeExplode();
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  YoutubePlayerController? _ytController;
 
   MusicItem? _currentSong;
   bool _isPlaying = false;
@@ -64,129 +64,48 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
   final List<String> _searchHistory = [];
 
-  @override
-  void initState() {
-    super.initState();
-    _audioPlayer.playerStateStream.listen((state) {
-      if (mounted) {
-        setState(() {
-          _isPlaying = state.playing;
-        });
-      }
-    });
-  }
+  void _playSong(MusicItem song) {
+    if (mounted) {
+      setState(() {
+        _currentSong = song;
+        _isLoadingAudio = true;
+      });
+    }
 
-  Future<void> _playSong(MusicItem song) async {
-    try {
-      if (mounted) {
-        setState(() {
-          _currentSong = song;
-          _isLoadingAudio = true;
-        });
-      }
-
-      await _audioPlayer.stop();
-
-      String streamUrl = '';
-
-      // Intento 1: Extracción directa mediante YouTube Explode (mweb)
-      try {
-        final manifest = await _yt.videos.streamsClient.getManifest(
-          song.id,
-          ytClients: [YoutubeApiClient.mweb, YoutubeApiClient.android],
-        );
-
-        final audioStreamInfo = manifest.audioOnly.withHighestBitrate();
-        streamUrl = audioStreamInfo.url.toString();
-      } catch (_) {
-        // Silenciar error del Intento 1 para continuar al respaldo
-      }
-
-      // Intento 2: Respaldo vía instancias Proxy públicas de Invidious / Piped
-      if (streamUrl.isEmpty) {
-        final fallbackEndpoints = [
-          'https://inv.privacydev.net/api/v1/videos/${song.id}',
-          'https://invidious.drgns.space/api/v1/videos/${song.id}',
-          'https://pipedapi.mha.fi/streams/${song.id}',
-        ];
-
-        for (final endpoint in fallbackEndpoints) {
-          try {
-            final res = await http
-                .get(Uri.parse(endpoint))
-                .timeout(const Duration(seconds: 4));
-
-            if (res.statusCode == 200) {
-              final data = json.decode(res.body);
-
-              // Estructura Piped
-              if (data is Map && data.containsKey('audioStreams')) {
-                final audioStreams = data['audioStreams'] as List?;
-                if (audioStreams != null && audioStreams.isNotEmpty) {
-                  streamUrl = audioStreams.first['url'] ?? '';
-                  if (streamUrl.isNotEmpty) break;
+    if (_ytController == null) {
+      _ytController =
+          YoutubePlayerController(
+            initialVideoId: song.id,
+            flags: const YoutubePlayerFlags(
+              autoPlay: true,
+              hideControls: true,
+              mute: false,
+              isLive: false,
+              forceHD: false,
+            ),
+          )..addListener(() {
+            if (mounted) {
+              setState(() {
+                _isPlaying = _ytController?.value.isPlaying ?? false;
+                if (_ytController?.value.playerState == PlayerState.playing ||
+                    _ytController?.value.playerState == PlayerState.paused) {
+                  _isLoadingAudio = false;
                 }
-              }
-              // Estructura Invidious
-              else if (data is Map && data.containsKey('adaptiveFormats')) {
-                final formats = data['adaptiveFormats'] as List?;
-                if (formats != null) {
-                  final audio = formats.firstWhere(
-                    (f) => (f['type'] ?? '').toString().startsWith('audio/'),
-                    orElse: () => null,
-                  );
-                  if (audio != null) {
-                    streamUrl = audio['url'] ?? '';
-                    if (streamUrl.isNotEmpty) break;
-                  }
-                }
-              }
+              });
             }
-          } catch (_) {
-            continue;
-          }
-        }
-      }
-
-      if (streamUrl.isNotEmpty) {
-        await _audioPlayer.setUrl(
-          streamUrl,
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-            'Origin': 'https://music.youtube.com',
-            'Referer': 'https://music.youtube.com/',
-          },
-        );
-
-        await _audioPlayer.play();
-
-        if (mounted) {
-          setState(() {
-            _isLoadingAudio = false;
-            _isPlaying = true;
           });
-        }
-      } else {
-        throw Exception("No se pudo obtener el enlace de reproducción.");
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoadingAudio = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al reproducir: $e'),
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
+    } else {
+      _ytController!.load(song.id);
     }
   }
 
   void _togglePlayPause() {
-    if (_isPlaying) {
-      _audioPlayer.pause();
-    } else {
-      _audioPlayer.play();
+    if (_ytController != null) {
+      if (_isPlaying) {
+        _ytController!.pause();
+      } else {
+        _ytController!.play();
+      }
     }
   }
 
@@ -209,7 +128,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
   @override
   void dispose() {
     _yt.close();
-    _audioPlayer.dispose();
+    _ytController?.dispose();
     super.dispose();
   }
 
@@ -245,6 +164,14 @@ class _NavigationScreenState extends State<NavigationScreen> {
       ),
       body: Column(
         children: [
+          if (_ytController != null)
+            Offstage(
+              offstage: true,
+              child: YoutubePlayer(
+                controller: _ytController!,
+                showVideoProgressIndicator: false,
+              ),
+            ),
           Expanded(child: screens[_currentIndex]),
           if (_currentSong != null)
             Container(
