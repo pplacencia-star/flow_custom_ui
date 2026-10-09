@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../core/app_theme.dart';
 import 'home_screen.dart';
 import 'search_screen.dart';
 import 'library_screen.dart';
 import 'playlist_screen.dart';
 import 'artist_screen.dart';
+import '../widgets/account_dialog.dart';
+import '../widgets/mini_player.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -15,49 +16,71 @@ class MainNavigation extends StatefulWidget {
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  int _currentIndex = 0;
+  int _selectedIndex = 0;
 
-  void _navigateTo(int index) {
+  void _onItemTapped(int index) {
     setState(() {
-      _currentIndex = index;
+      _selectedIndex = index;
     });
+  }
+
+  void _openPlaylist() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            PlaylistScreen(onBack: () => Navigator.pop(context)),
+      ),
+    );
+  }
+
+  void _openArtist() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            ArtistScreen(onBack: () => Navigator.pop(context)),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> screens = [
-      HomeScreen(
-        onOpenPlaylist: () => _navigateTo(2),
-        onOpenArtist: () => _navigateTo(4),
-      ),
+      HomeScreen(onOpenPlaylist: _openPlaylist, onOpenArtist: _openArtist),
       const SearchScreen(),
-      LibraryScreen(
-        onOpenPlaylist: () => _navigateTo(2),
-        onOpenArtist: () => _navigateTo(4),
-      ),
-      PlaylistScreen(onBack: () => _navigateTo(0)),
-      ArtistScreen(onBack: () => _navigateTo(0)),
+      LibraryScreen(onOpenPlaylist: _openPlaylist, onOpenArtist: _openArtist),
+      const AccountScreen(),
     ];
 
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: screens),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex > 2 ? 0 : _currentIndex,
-        onTap: (index) => _navigateTo(index),
-        backgroundColor: AppColors.background,
-        selectedItemColor: AppColors.accent,
-        unselectedItemColor: AppColors.muted,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_filled),
-            label: 'Inicio',
+      backgroundColor: const Color(0xFF0D0B14),
+      body: Stack(
+        children: [
+          IndexedStack(index: _selectedIndex, children: screens),
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: MiniPlayerWidget(),
           ),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: const Color(0xFF161224),
+        selectedItemColor: const Color(0xFFD500F9),
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
           BottomNavigationBarItem(
             icon: Icon(Icons.library_music),
             label: 'Biblioteca',
           ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Cuenta'),
         ],
       ),
     );

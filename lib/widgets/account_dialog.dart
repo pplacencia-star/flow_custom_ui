@@ -1,49 +1,72 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-import '../core/app_theme.dart';
+import '../widgets/account_dialog.dart';
 
-class AccountDialog extends StatelessWidget {
-  const AccountDialog({super.key});
+class AccountScreen extends StatelessWidget {
+  const AccountScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: AppColors.phoneBg,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: const BorderSide(color: Color(0x5C6B4B88)),
+    final user = FirebaseAuth.instance.currentUser;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D0B14),
+      appBar: AppBar(
+        title: const Text('Perfil de Usuario'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
-      child: Container(
-        padding: const EdgeInsets.all(22),
-        constraints: const BoxConstraints(maxWidth: 490),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Workspace Account',
-              style: TextStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.account_circle,
+                size: 90,
+                color: Color(0xFF7C4DFF),
               ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF241831),
-                minimumSize: const Size(double.infinity, 45),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(11),
-                  side: const BorderSide(color: Color(0x12FFFFFF)),
+              const SizedBox(height: 16),
+              Text(
+                user?.email ?? 'Usuario sin correo',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              onPressed: () {},
-              child: const Text(
-                'Continuar con Google',
-                style: TextStyle(color: Color(0xFFAD98E2)),
+              const SizedBox(height: 8),
+              Text(
+                'ID: ${user?.uid ?? "N/A"}',
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                textAlign: TextAlign.center,
               ),
-            ),
-          ],
+              const SizedBox(height: 36),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF5252),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 28,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () async {
+                  await FirebaseAuth.instance.signOut();
+                },
+                icon: const Icon(Icons.logout),
+                label: const Text(
+                  'Cerrar Sesión',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
