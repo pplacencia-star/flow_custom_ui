@@ -1,15 +1,19 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'firebase_options.dart';
 import 'screens/main_navigation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Inicializa Firebase con las opciones generadas por CLI
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  if (!kIsWeb) {
+    await GoogleSignIn.instance.initialize();
+  }
 
   runApp(const MyApp());
 }
@@ -27,15 +31,12 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF0D0B14),
         primaryColor: const Color(0xFFD500F9),
       ),
-      // Escucha el estado de la autenticación en tiempo real
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
-          // Si el usuario está autenticado, va a la navegación principal
           if (snapshot.hasData) {
             return const MainNavigation();
           }
-          // Si no está autenticado, muestra la pantalla de Login/Registro
           return const AuthWrapper();
         },
       ),
@@ -43,7 +44,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Widget provisional para pantalla de autenticación si no está iniciada la sesión
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
@@ -74,6 +74,35 @@ class _AuthWrapperState extends State<AuthWrapper> {
     } on FirebaseAuthException catch (e) {
       setState(() {
         _errorMessage = e.message ?? 'Ocurrió un error al autenticar';
+      });
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _errorMessage = '');
+    try {
+      if (kIsWeb) {
+        // Método nativo para Web (Chrome)
+        GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        await FirebaseAuth.instance.signInWithPopup(googleProvider);
+      } else {
+        // Método para dispositivos móviles (Android/iOS)
+        final GoogleSignInAccount googleUser = await GoogleSignIn.instance
+            .authenticate();
+        final credential = GoogleAuthProvider.credential(
+          idToken: googleUser.authentication.idToken,
+        );
+        await FirebaseAuth.instance.signInWithCredential(credential);
+      }
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) return;
+      setState(() {
+        _errorMessage =
+            'Error en Google Sign-In: ${e.description ?? e.code.name}';
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error al iniciar sesión con Google: $e';
       });
     }
   }
@@ -156,6 +185,30 @@ class _AuthWrapperState extends State<AuthWrapper> {
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white24),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: _signInWithGoogle,
+                  icon: const Icon(
+                    Icons.g_mobiledata,
+                    size: 30,
+                    color: Colors.white,
+                  ),
+                  label: const Text(
+                    'Continuar con Google',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),

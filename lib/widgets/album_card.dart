@@ -1,65 +1,66 @@
 import 'package:flutter/material.dart';
 
-import '../core/app_theme.dart';
-
-class AlbumCardWidget extends StatelessWidget {
+class AlbumCard extends StatelessWidget {
   final String title;
-  final String subtitle;
+  final String artist;
   final String imageUrl;
+  final VoidCallback? onTap;
 
-  const AlbumCardWidget({
+  const AlbumCard({
     super.key,
     required this.title,
-    required this.subtitle,
+    required this.artist,
     required this.imageUrl,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 120,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              width: 120,
-              height: 120,
-              color: AppColors.card,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 140,
+        margin: const EdgeInsets.only(right: 16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
               child: Image.network(
                 imageUrl,
+                height: 130,
+                width: 140,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: AppColors.card,
-                  child: const Icon(
-                    Icons.music_note,
-                    color: AppColors.muted,
-                    size: 40,
-                  ),
-                ),
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 130,
+                    width: 140,
+                    color: const Color(0xFF161224),
+                    child: const Icon(Icons.music_note, color: Colors.grey),
+                  );
+                },
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+            const SizedBox(height: 8),
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 10, color: AppColors.muted),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+            const SizedBox(height: 2),
+            Text(
+              artist,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+            ),
+          ],
+        ),
       ),
     );
   }
