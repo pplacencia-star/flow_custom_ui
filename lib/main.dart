@@ -77,19 +77,16 @@ class _NavigationScreenState extends State<NavigationScreen> {
   }
 
   Future<void> _playSong(MusicItem song) async {
-    setState(() {
-      _currentSong = song;
-      _isLoadingAudio = true;
-    });
-
     try {
+      if (mounted) setState(() => _isLoadingAudio = true);
       String streamUrl = '';
 
-      if (kIsWeb) {
+      // Intento 1: Piped API (Servidor proxy para saltar bloqueo de YouTube)
+      try {
         final url = Uri.parse(
           'https://pipedapi.kavin.rocks/streams/${song.id}',
         );
-        final res = await http.get(url);
+        final res = await http.get(url).timeout(const Duration(seconds: 5));
         if (res.statusCode == 200) {
           final data = json.decode(res.body);
           final audioStreams = data['audioStreams'] as List?;
@@ -97,14 +94,27 @@ class _NavigationScreenState extends State<NavigationScreen> {
             streamUrl = audioStreams.first['url'] ?? '';
           }
         }
-      } else {
-        final manifest = await _yt.videos.streamsClient.getManifest(song.id);
+      } catch (_) {}
+
+      // Intento 2: Respaldo con YoutubeExplode
+      if (streamUrl.isEmpty) {
+        final manifest = await _yt.videos.streamsClient.getManifest(
+          song.id,
+          ytClients: [YoutubeApiClient.android, YoutubeApiClient.androidVr],
+        );
         final audioStreamInfo = manifest.audioOnly.withHighestBitrate();
         streamUrl = audioStreamInfo.url.toString();
       }
 
       if (streamUrl.isNotEmpty) {
-        await _audioPlayer.setUrl(streamUrl);
+        await _audioPlayer.stop();
+        await _audioPlayer.setUrl(
+          streamUrl,
+          headers: {
+            'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
+        );
         await _audioPlayer.play();
         if (mounted) {
           setState(() {
