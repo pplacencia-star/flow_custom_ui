@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 void main() {
   runApp(const MusicNovaApp());
@@ -56,13 +56,37 @@ class _NavigationScreenState extends State<NavigationScreen> {
   int _currentIndex = 0;
 
   final YoutubeExplode _yt = YoutubeExplode();
-  YoutubePlayerController? _ytController;
+  late YoutubePlayerController _ytController;
 
   MusicItem? _currentSong;
   bool _isPlaying = false;
   bool _isLoadingAudio = false;
 
   final List<String> _searchHistory = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _ytController = YoutubePlayerController(
+      params: const YoutubePlayerParams(
+        showControls: false,
+        showFullscreenButton: false,
+        mute: false,
+      ),
+    );
+
+    _ytController.stream.listen((event) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = event.playerState == PlayerState.playing;
+          if (event.playerState == PlayerState.playing ||
+              event.playerState == PlayerState.paused) {
+            _isLoadingAudio = false;
+          }
+        });
+      }
+    });
+  }
 
   void _playSong(MusicItem song) {
     if (mounted) {
@@ -72,40 +96,14 @@ class _NavigationScreenState extends State<NavigationScreen> {
       });
     }
 
-    if (_ytController == null) {
-      _ytController =
-          YoutubePlayerController(
-            initialVideoId: song.id,
-            flags: const YoutubePlayerFlags(
-              autoPlay: true,
-              hideControls: true,
-              mute: false,
-              isLive: false,
-              forceHD: false,
-            ),
-          )..addListener(() {
-            if (mounted) {
-              setState(() {
-                _isPlaying = _ytController?.value.isPlaying ?? false;
-                if (_ytController?.value.playerState == PlayerState.playing ||
-                    _ytController?.value.playerState == PlayerState.paused) {
-                  _isLoadingAudio = false;
-                }
-              });
-            }
-          });
-    } else {
-      _ytController!.load(song.id);
-    }
+    _ytController.loadVideoById(videoId: song.id);
   }
 
   void _togglePlayPause() {
-    if (_ytController != null) {
-      if (_isPlaying) {
-        _ytController!.pause();
-      } else {
-        _ytController!.play();
-      }
+    if (_isPlaying) {
+      _ytController.pauseVideo();
+    } else {
+      _ytController.playVideo();
     }
   }
 
@@ -128,7 +126,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
   @override
   void dispose() {
     _yt.close();
-    _ytController?.dispose();
+    _ytController.close();
     super.dispose();
   }
 
@@ -164,14 +162,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
       ),
       body: Column(
         children: [
-          if (_ytController != null)
-            Offstage(
-              offstage: true,
-              child: YoutubePlayer(
-                controller: _ytController!,
-                showVideoProgressIndicator: false,
-              ),
-            ),
+          Offstage(
+            offstage: true,
+            child: YoutubePlayer(controller: _ytController),
+          ),
           Expanded(child: screens[_currentIndex]),
           if (_currentSong != null)
             Container(
