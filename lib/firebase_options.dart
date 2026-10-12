@@ -56,6 +56,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1012817964352',
     projectId: 'music-nova-pruebas',
     storageBucket: 'music-nova-pruebas.firebasestorage.app',
+    
+    
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
