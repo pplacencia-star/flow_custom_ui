@@ -1,73 +1,163 @@
 import 'package:flutter/material.dart';
 
+import '../services/music_player_service.dart';
+
 class MiniPlayer extends StatelessWidget {
   const MiniPlayer({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 65,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      decoration: BoxDecoration(
-        color: const Color(0xFF161224),
-        border: Border(
-          top: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1),
-        ),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              'https://picsum.photos/200?random=1',
-              height: 45,
-              width: 45,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  height: 45,
-                  width: 45,
-                  color: Colors.grey[800],
-                  child: const Icon(Icons.music_note, color: Colors.white),
-                );
-              },
+    final music = MusicPlayerService.instance;
+
+    return AnimatedBuilder(
+      animation: music,
+      builder: (context, child) {
+        final track = music.currentTrack;
+
+        final duration = music.duration.inMilliseconds.toDouble();
+
+        final position = music.position.inMilliseconds.toDouble();
+
+        final progress = duration > 0
+            ? (position / duration).clamp(0.0, 1.0)
+            : 0.0;
+
+        return Container(
+          height: 65,
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          decoration: BoxDecoration(
+            color: const Color(0xFF161224),
+            border: Border(
+              top: BorderSide(
+                color: Colors.white.withValues(alpha: 0.1),
+                width: 1,
+              ),
             ),
           ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Midnight Memories',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+          child: Column(
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: track != null && track.artwork.isNotEmpty
+                          ? Image.network(
+                              track.artwork,
+                              height: 45,
+                              width: 45,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                height: 45,
+                                width: 45,
+                                color: Colors.grey[800],
+                                child: const Icon(
+                                  Icons.music_note,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            )
+                          : Container(
+                              height: 45,
+                              width: 45,
+                              color: Colors.grey[800],
+                              child: const Icon(
+                                Icons.music_note,
+                                color: Colors.white,
+                              ),
+                            ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            track?.title ?? 'Sin reproducción',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+
+                          Text(
+                            track?.artist ?? 'Music-Nova',
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    IconButton(
+                      icon: Icon(
+                        music.isPlaying ? Icons.pause : Icons.play_arrow,
+                        color: Colors.white,
+                      ),
+                      onPressed: track == null
+                          ? null
+                          : () {
+                              music.togglePlayPause();
+                            },
+                    ),
+
+                    IconButton(
+                      icon: const Icon(Icons.skip_next, color: Colors.white),
+                      onPressed: track == null
+                          ? null
+                          : () {
+                              music.forward();
+                            },
+                    ),
+                  ],
+                ),
+              ),
+
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: track == null || duration <= 0
+                    ? null
+                    : (details) {
+                        final width = context.size?.width ?? 1;
+
+                        final percentage = (details.localPosition.dx / width)
+                            .clamp(0.0, 1.0);
+
+                        final newPosition = Duration(
+                          milliseconds: (duration * percentage).round(),
+                        );
+
+                        music.seek(newPosition);
+                      },
+                child: SizedBox(
+                  height: 8,
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 3,
+                      backgroundColor: Colors.grey[800],
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Color(0xFFD500F9),
+                      ),
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                Text(
-                  'Cyberwave',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.play_arrow, color: Colors.white),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.skip_next, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

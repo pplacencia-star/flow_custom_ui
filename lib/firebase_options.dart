@@ -20,7 +20,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AiZaSyDpewGQWf0xa0lECEwO-Gwi6d1DK5VMmFg',
+    apiKey: 'AIzaSyDpewGQwF0xaOlECewO-GWi6d1DK5VMmFg',
     authDomain: 'music-nova-2164b.firebaseapp.com',
     projectId: 'music-nova-2164b',
     storageBucket: 'music-nova-2164b.firebasestorage.app',
