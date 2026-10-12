@@ -4,6 +4,16 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
+/// Default [FirebaseOptions] for use with your Firebase apps.
+///
+/// Example:
+/// ```dart
+/// import 'firebase_options.dart';
+/// // ...
+/// await Firebase.initializeApp(
+///   options: DefaultFirebaseOptions.currentPlatform,
+/// );
+/// ```
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -12,6 +22,17 @@ class DefaultFirebaseOptions {
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return android;
+      case TargetPlatform.iOS:
+        return ios;
+      case TargetPlatform.macOS:
+        return macos;
+      case TargetPlatform.windows:
+        return windows;
+      case TargetPlatform.linux:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for linux - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       default:
         throw UnsupportedError(
           'DefaultFirebaseOptions are not supported for this platform.',
@@ -30,12 +51,40 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AiZaSyDpewGQWf0xa0lECEwO-Gwi6d1DK5VMmFg',
-    authDomain: 'music-nova-2164b.firebaseapp.com',
-    projectId: 'music-nova-2164b',
-    storageBucket: 'music-nova-2164b.firebasestorage.app',
-    messagingSenderId: '21226921183',
-    appId: '1:21226921183:web:a3ac649f68851faca2dd6a',
-    androidClientId: '21226921183-7sfl7o49a4rttqa17a5kn5ghddrtbrda.apps.googleusercontent.com',
+    apiKey: 'AIzaSyD_KZaJrEgAahxXun8L6pXjGmt7IZjPXlU',
+    appId: '1:1012817964352:android:08815314eaf49009d75ea5',
+    messagingSenderId: '1012817964352',
+    projectId: 'music-nova-pruebas',
+    storageBucket: 'music-nova-pruebas.firebasestorage.app',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyCNlBGAXHawXmi1hkuXPP7FHjdEF-5q7Y4',
+    appId: '1:1012817964352:ios:f87c33f34a678070d75ea5',
+    messagingSenderId: '1012817964352',
+    projectId: 'music-nova-pruebas',
+    storageBucket: 'music-nova-pruebas.firebasestorage.app',
+    iosClientId: '1012817964352-cn732egf9enc2p0jfalb6735pird72ir.apps.googleusercontent.com',
+    iosBundleId: 'com.example.flowCustomUi',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyCNlBGAXHawXmi1hkuXPP7FHjdEF-5q7Y4',
+    appId: '1:1012817964352:ios:f87c33f34a678070d75ea5',
+    messagingSenderId: '1012817964352',
+    projectId: 'music-nova-pruebas',
+    storageBucket: 'music-nova-pruebas.firebasestorage.app',
+    iosClientId: '1012817964352-cn732egf9enc2p0jfalb6735pird72ir.apps.googleusercontent.com',
+    iosBundleId: 'com.example.flowCustomUi',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyAx58dUDevH91c4_uSj1wfvV9vQLo6w1tA',
+    appId: '1:1012817964352:web:cf7266beba89047cd75ea5',
+    messagingSenderId: '1012817964352',
+    projectId: 'music-nova-pruebas',
+    authDomain: 'music-nova-pruebas.firebaseapp.com',
+    storageBucket: 'music-nova-pruebas.firebasestorage.app',
+    measurementId: 'G-28V67HBENC',
   );
 }

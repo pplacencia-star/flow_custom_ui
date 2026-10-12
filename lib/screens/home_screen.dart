@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../widgets/album_card.dart';
 import '../widgets/mini_player.dart';
+import 'premium_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final VoidCallback? onOpenPlaylist;
@@ -80,6 +81,54 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                                    const SizedBox(height: 24),
+
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PremiumScreen()),
+                    ),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF7445E5), Color(0xFFD500F9)],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.workspace_premium,
+                              color: Colors.white, size: 32),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Hazte Premium',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'MX\$49 al mes (modo de prueba)',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.chevron_right, color: Colors.white),
+                        ],
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 24),
 
