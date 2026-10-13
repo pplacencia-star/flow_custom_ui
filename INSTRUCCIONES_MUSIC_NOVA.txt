@@ -1,0 +1,18 @@
+MUSIC-NOVA — actualización de animación y favoritos
+
+1. Abre esta carpeta en Visual Studio Code.
+2. Ejecuta flutter pub get (instala shared_preferences).
+3. Ejecuta flutter run -d chrome, o flutter run para Android.
+
+NUEVO: intro original con estrella fugaz, órbita luminosa, destello y aparición del logo.
+NUEVO: Me gusta se guarda inmediatamente en el almacenamiento local de cada cuenta.
+Si Firestore está caído/no disponible, los favoritos siguen funcionando en este dispositivo.
+Al iniciar se intenta descargar/sincronizar favoritos con Firestore.
+
+IMPORTANTE: la sincronización entre dispositivos y las playlists todavía requieren
+que Firestore exista y funcione. Este ZIP no puede habilitar Firestore remotamente.
+En Firebase Console > Firestore Database verifica que exista una base de datos
+(predeterminada) en el proyecto music-nova-pruebas. Publica firestore.rules.
+Revisa en Chrome DevTools/Console si hay errores de red o permisos.
+
+LIMITACIÓN: sin acceso a un SDK Flutter en este entorno no se pudo compilar.

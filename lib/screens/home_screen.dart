@@ -3,13 +3,68 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../widgets/album_card.dart';
 import '../widgets/mini_player.dart';
+import '../services/audius_service.dart';
+import '../services/music_player_service.dart';
+import '../widgets/song_actions.dart';
 import 'premium_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final VoidCallback? onOpenPlaylist;
   final VoidCallback? onOpenArtist;
 
   const HomeScreen({super.key, this.onOpenPlaylist, this.onOpenArtist});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late final Map<String, Future<List<AudiusTrack>>> _genres;
+  @override
+  void initState() {
+    super.initState();
+    _genres = {
+      'Pop': AudiusService.trending(genre: 'Pop'),
+      'Rock': AudiusService.trending(genre: 'Rock'),
+      'Hip-Hop': AudiusService.trending(genre: 'Hip-Hop/Rap'),
+      'Electrónica': AudiusService.trending(genre: 'Electronic'),
+      'Reggaeton': AudiusService.searchTracks('reggaeton'),
+      'Indie': AudiusService.trending(genre: 'Indie'),
+      'Jazz': AudiusService.trending(genre: 'Jazz'),
+      'Clásica': AudiusService.trending(genre: 'Classical'),
+    };
+  }
+
+  Widget musicSection(String genre) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(genre, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 12),
+      SizedBox(height: 190, child: FutureBuilder<List<AudiusTrack>>(
+        future: _genres[genre],
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator(color: Color(0xFFD500F9)));
+          if (snapshot.hasError) return const Text('No se pudo cargar este género', style: TextStyle(color: Colors.grey));
+          final tracks = snapshot.data ?? [];
+          return ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: tracks.length,
+            itemBuilder: (context, i) {
+              final t = tracks[i];
+              return SizedBox(width: 156, child: Column(children: [
+                Expanded(child: AlbumCard(title: t.title, artist: t.artist, imageUrl: t.artwork,
+                  onTap: () async { try { await MusicPlayerService.instance.playTrack(t); } catch (_) {
+                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo reproducir')));
+                  } })),
+                SizedBox(height: 36, child: SongActions(track: t)),
+              ]));
+            },
+          );
+        },
+      )),
+      const SizedBox(height: 24),
+    ],
+  );
 
   String _getUserDisplayName() {
     final user = FirebaseAuth.instance.currentUser;
@@ -49,7 +104,11 @@ class HomeScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
+                      Row(
+                        children: [
+                          ClipRRect(borderRadius: BorderRadius.circular(14), child: Image.asset('assets/icon/app_icon.png', width: 52, height: 52)),
+                          const SizedBox(width: 12),
+                          Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
@@ -70,6 +129,8 @@ class HomeScreen extends StatelessWidget {
                               color: Colors.white,
                             ),
                           ),
+                        ],
+                      ),
                         ],
                       ),
                       const CircleAvatar(
@@ -132,67 +193,9 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  const Text(
-                    'Escuchado recientemente',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 190,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: const [
-                        AlbumCard(
-                          title: 'Midnight Memories',
-                          artist: 'Cyberwave',
-                          imageUrl: 'https://picsum.photos/200?random=1',
-                        ),
-                        AlbumCard(
-                          title: 'Neon Nights',
-                          artist: 'Luna Beats',
-                          imageUrl: 'https://picsum.photos/200?random=2',
-                        ),
-                        AlbumCard(
-                          title: 'Synthwave Dreams',
-                          artist: 'Retro Horizon',
-                          imageUrl: 'https://picsum.photos/200?random=3',
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  const Text(
-                    'Recomendados para ti',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 190,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: const [
-                        AlbumCard(
-                          title: 'Cosmic Journey',
-                          artist: 'Astra',
-                          imageUrl: 'https://picsum.photos/200?random=4',
-                        ),
-                        AlbumCard(
-                          title: 'Ethereal Echoes',
-                          artist: 'Solaris',
-                          imageUrl: 'https://picsum.photos/200?random=5',
-                        ),
-                      ],
-                    ),
-                  ),
+                  const Text('Recomendados para ti', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                  const SizedBox(height: 16),
+                  for (final genre in _genres.keys) musicSection(genre),
                 ],
               ),
             ),

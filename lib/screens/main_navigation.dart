@@ -1,6 +1,6 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'dart:ui';
+import '../widgets/nova_glass.dart';
 
 import 'home_screen.dart';
 import 'search_screen.dart';
@@ -37,37 +37,37 @@ class _MainNavigationState extends State<MainNavigation> {
 
     return Scaffold(
       extendBody: true,
-      body: screens[_selectedIndex],
-      bottomNavigationBar: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.06),
-              border: Border(
-                top: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
-              ),
-            ),
-            child: BottomNavigationBar(
-              currentIndex: _selectedIndex,
-              onTap: _onItemTapped,
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              selectedItemColor: const Color(0xFFD500F9),
-              unselectedItemColor: Colors.white60,
-              type: BottomNavigationBarType.fixed,
-              items: const [
-                BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
-                BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.library_music),
-                  label: 'Biblioteca',
-                ),
-                BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Cuenta'),
-              ],
-            ),
+      backgroundColor: Colors.transparent,
+      body: NovaBackdrop(child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 330),
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(begin: const Offset(0.04, 0), end: Offset.zero).animate(animation),
+            child: child,
           ),
         ),
+        child: KeyedSubtree(key: ValueKey(_selectedIndex), child: screens[_selectedIndex]),
+      )),
+      bottomNavigationBar: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+        child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22), child: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        backgroundColor: const Color(0xBB211830),
+        selectedItemColor: const Color(0xFFD500F9),
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.library_music),
+            label: 'Biblioteca',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Cuenta'),
+        ],
+      )),
       ),
     );
   }

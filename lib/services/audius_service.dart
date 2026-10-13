@@ -56,6 +56,17 @@ class AudiusService {
         .toList();
   }
 
+  static Future<List<AudiusTrack>> trending({String? genre}) async {
+    final params = <String, String>{'limit': '20'};
+    if (genre != null && genre.isNotEmpty) params['genre'] = genre;
+    final uri = Uri.parse('$baseUrl/tracks/trending').replace(queryParameters: params);
+    final response = await http.get(uri);
+    if (response.statusCode != 200) throw Exception('Error de Audius: ${response.statusCode}');
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return (data['data'] as List<dynamic>? ?? [])
+        .map((e) => AudiusTrack.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
   static String getStreamUrl(String trackId) {
     return '$baseUrl/tracks/${Uri.encodeComponent(trackId)}/stream';
   }

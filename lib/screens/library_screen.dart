@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../core/app_theme.dart';
 import '../widgets/mini_player.dart';
+import '../services/playlist_service.dart';
+import 'saved_tracks_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   final VoidCallback onOpenPlaylist;
@@ -20,26 +22,24 @@ class LibraryScreen extends StatefulWidget {
 class _LibraryScreenState extends State<LibraryScreen> {
   String selectedFilter = 'Listas';
 
-  final List<Map<String, String>> items = const [
-    {
-      'title': 'Noches violetas',
-      'subtitle': 'Playlist • 24 canciones',
-      'imageUrl': 'https://images.unsplash.com/photo-1608319917470-9d9179430f8d?auto=format&fit=crop&w=400&q=85',
-      'type': 'playlist',
-    },
-    {
-      'title': 'En tu órbita',
-      'subtitle': 'Playlist • 32 canciones',
-      'imageUrl': 'https://images.unsplash.com/photo-1565145368739-29e5a81be478?auto=format&fit=crop&w=400&q=85',
-      'type': 'playlist',
-    },
-    {
-      'title': 'The Weeknd',
-      'subtitle': 'Artista • Siguiendo',
-      'imageUrl': 'https://images.unsplash.com/photo-1576967402682-19976eb930f2?auto=format&fit=crop&w=700&q=85',
-      'type': 'artist',
-    },
-  ];
+  Future<void> createPlaylist() async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(context: context, builder: (ctx) => AlertDialog(
+      backgroundColor: AppColors.card,
+      title: const Text('Nueva playlist', style: TextStyle(color: Colors.white)),
+      content: TextField(controller: controller, autofocus: true, style: const TextStyle(color: Colors.white),
+        decoration: const InputDecoration(hintText: 'Nombre de la playlist')),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+        TextButton(onPressed: () => Navigator.pop(ctx, controller.text), child: const Text('Crear'))],
+    ));
+    controller.dispose();
+    if (name == null || name.trim().isEmpty) return;
+    try { await PlaylistService.create(name); }
+    catch (_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo crear la playlist'))); }
+  }
+
+  void openSaved({String? id, required String name}) => Navigator.push(context,
+    MaterialPageRoute(builder: (_) => SavedTracksScreen(playlistId: id, title: name)));
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +77,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           color: Colors.white,
                           size: 28,
                         ),
-                        onPressed: () {},
+                        onPressed: createPlaylist,
                       ),
                     ],
                   ),
@@ -118,7 +118,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
                   // Tus Me Gusta
                   ListTile(
-                    onTap: widget.onOpenPlaylist,
+                    onTap: () => openSaved(name: 'Tus Me Gusta'),
                     contentPadding: EdgeInsets.zero,
                     leading: Container(
                       width: 56,
@@ -141,61 +141,32 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         fontSize: 15,
                       ),
                     ),
-                    subtitle: const Text(
-                      '128 canciones · Tu colección',
-                      style: TextStyle(color: AppColors.muted, fontSize: 12),
-                    ),
+                    subtitle: StreamBuilder(stream: PlaylistService.likes.snapshots(), builder: (context, snapshot) => Text('${snapshot.data?.docs.length ?? 0} canciones · Tu colección', style: const TextStyle(color: AppColors.muted, fontSize: 12))),
                   ),
 
                   const SizedBox(height: 12),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: items.length,
-                      itemBuilder: (context, index) {
-                        final item = items[index];
-                        final isArtist = item['type'] == 'artist';
-
+                  Expanded(child: StreamBuilder(
+                    stream: PlaylistService.playlists.snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) return const Center(child: Text('Inicia sesión para ver tus playlists', style: TextStyle(color: Colors.white)));
+                      if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                      final docs = snapshot.data!.docs;
+                      return ListView.builder(itemCount: docs.length, itemBuilder: (context, i) {
+                        final doc = docs[i];
+                        final name = doc.data()['name']?.toString() ?? 'Playlist';
                         return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 4,
-                          ),
-                          onTap: isArtist
-                              ? widget.onOpenArtist
-                              : widget.onOpenPlaylist,
-                          leading: ClipRRect(
-                            borderRadius: BorderRadius.circular(
-                              isArtist ? 28 : 8,
-                            ),
-                            child: Image.network(
-                              item['imageUrl']!,
-                              width: 56,
-                              height: 56,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                          title: Text(
-                            item['title']!,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                            ),
-                          ),
-                          subtitle: Text(
-                            item['subtitle']!,
-                            style: const TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 12,
-                            ),
-                          ),
-                          trailing: const Icon(
-                            Icons.more_vert,
-                            color: AppColors.muted,
-                          ),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                          onTap: () => openSaved(id: doc.id, name: name),
+                          leading: ClipRRect(borderRadius: BorderRadius.circular(8), child: Container(
+                            width: 56, height: 56, color: AppColors.card,
+                            child: const Icon(Icons.queue_music, color: AppColors.accent))),
+                          title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                          subtitle: const Text('Playlist', style: TextStyle(color: AppColors.muted)),
+                          trailing: const Icon(Icons.chevron_right, color: AppColors.muted),
                         );
-                      },
-                    ),
-                  ),
+                      });
+                    },
+                  )),
                 ],
               ),
             ),

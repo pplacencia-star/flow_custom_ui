@@ -4,6 +4,7 @@ import '../core/app_theme.dart';
 import '../widgets/mini_player.dart';
 import '../services/audius_service.dart';
 import '../services/music_player_service.dart';
+import '../widgets/song_actions.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -69,6 +70,26 @@ class _SearchScreenState extends State<SearchScreen> {
           isSearching = false;
         });
       }
+    }
+  }
+
+  Future<void> openGenre(String name) async {
+    final genre = switch (name) {
+      'Hip-Hop' => 'Hip-Hop/Rap',
+      'Electrónica' => 'Electronic',
+      'Clásica' => 'Classical',
+      _ => name,
+    };
+    setState(() { isSearching = true; hasSearched = true; searchError = null; results = []; });
+    try {
+      final songs = name == 'Reggaeton'
+          ? await AudiusService.searchTracks('reggaeton')
+          : await AudiusService.trending(genre: genre);
+      if (mounted) setState(() => results = songs);
+    } catch (_) {
+      if (mounted) setState(() => searchError = 'No se pudo cargar este género');
+    } finally {
+      if (mounted) setState(() => isSearching = false);
     }
   }
 
@@ -190,7 +211,10 @@ class _SearchScreenState extends State<SearchScreen> {
       itemBuilder: (context, index) {
         final genre = genres[index];
 
-        return Container(
+        return InkWell(
+          onTap: () => openGenre(genre['title'] as String),
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: genre['color'],
@@ -203,6 +227,7 @@ class _SearchScreenState extends State<SearchScreen> {
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),
+          ),
           ),
         );
       },
@@ -224,7 +249,14 @@ class _SearchScreenState extends State<SearchScreen> {
       itemBuilder: (context, index) {
         final track = results[index];
 
-        return ListTile(
+        return TweenAnimationBuilder<double>(
+          duration: Duration(milliseconds: 250 + (index % 7) * 65),
+          tween: Tween(begin: 0, end: 1),
+          builder: (context, value, child) => Opacity(
+            opacity: value,
+            child: Transform.translate(offset: Offset(0, 15 * (1 - value)), child: child),
+          ),
+          child: ListTile(
           leading: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: track.artwork.isNotEmpty
@@ -233,7 +265,8 @@ class _SearchScreenState extends State<SearchScreen> {
                     width: 50,
                     height: 50,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) =>
+                    // ignore: unnecessary_underscores
+                    errorBuilder: (_, __, _) =>
                         const Icon(Icons.music_note, color: Colors.white),
                   )
                 : const Icon(Icons.music_note, color: Colors.white),
@@ -246,7 +279,7 @@ class _SearchScreenState extends State<SearchScreen> {
             style: const TextStyle(color: Colors.grey),
           ),
 
-          trailing: const Icon(Icons.play_arrow, color: Color(0xFFD500F9)),
+          trailing: SongActions(track: track),
 
           onTap: () async {
             try {
@@ -261,6 +294,7 @@ class _SearchScreenState extends State<SearchScreen> {
               );
             }
           },
+        ),
         );
       },
     );

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../services/music_player_service.dart';
-import 'glass.dart';
 
 class MiniPlayer extends StatelessWidget {
   const MiniPlayer({super.key});
@@ -23,11 +22,18 @@ class MiniPlayer extends StatelessWidget {
             ? (position / duration).clamp(0.0, 1.0)
             : 0.0;
 
-        return GlassContainer(
+        return Container(
           height: 65,
-          radius: 18,
-          margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          decoration: BoxDecoration(
+            color: const Color(0xFF161224),
+            border: Border(
+              top: BorderSide(
+                color: Colors.white.withValues(alpha: 0.1),
+                width: 1,
+              ),
+            ),
+          ),
           child: Column(
             children: [
               Expanded(
@@ -41,7 +47,8 @@ class MiniPlayer extends StatelessWidget {
                               height: 45,
                               width: 45,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Container(
+                              // ignore: unnecessary_underscores
+                              errorBuilder: (_, __, ___) => Container(
                                 height: 45,
                                 width: 45,
                                 color: Colors.grey[800],
@@ -83,7 +90,7 @@ class MiniPlayer extends StatelessWidget {
                           Text(
                             track?.artist ?? 'Music-Nova',
                             style: const TextStyle(
-                              color: Colors.white70,
+                              color: Colors.grey,
                               fontSize: 12,
                             ),
                             maxLines: 1,
@@ -117,39 +124,36 @@ class MiniPlayer extends StatelessWidget {
                 ),
               ),
 
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  return GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTapDown: track == null || duration <= 0
-                        ? null
-                        : (details) {
-                            final percentage =
-                                (details.localPosition.dx / constraints.maxWidth)
-                                    .clamp(0.0, 1.0);
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: track == null || duration <= 0
+                    ? null
+                    : (details) {
+                        final width = context.size?.width ?? 1;
 
-                            final newPosition = Duration(
-                              milliseconds: (duration * percentage).round(),
-                            );
+                        final percentage = (details.localPosition.dx / width)
+                            .clamp(0.0, 1.0);
 
-                            music.seek(newPosition);
-                          },
-                    child: SizedBox(
-                      height: 8,
-                      child: Align(
-                        alignment: Alignment.topCenter,
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 3,
-                          backgroundColor: Colors.white24,
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            Color(0xFFD500F9),
-                          ),
-                        ),
+                        final newPosition = Duration(
+                          milliseconds: (duration * percentage).round(),
+                        );
+
+                        music.seek(newPosition);
+                      },
+                child: SizedBox(
+                  height: 8,
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 3,
+                      backgroundColor: Colors.grey[800],
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Color(0xFFD500F9),
                       ),
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
             ],
           ),
