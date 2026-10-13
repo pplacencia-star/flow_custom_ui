@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import 'firebase_options.dart';
 import 'screens/main_navigation.dart';
+   import 'widgets/glass.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,11 +25,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      builder: (context, child) => GlassBackground(child: child!),
       title: 'Music-Nova',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0D0B14),
+          scaffoldBackgroundColor: Colors.transparent,
         primaryColor: const Color(0xFFD500F9),
       ),
       home: StreamBuilder<User?>(

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import 'home_screen.dart';
@@ -34,23 +36,38 @@ class _MainNavigationState extends State<MainNavigation> {
     ];
 
     return Scaffold(
+      extendBody: true,
       body: screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        backgroundColor: const Color(0xFF161224),
-        selectedItemColor: const Color(0xFFD500F9),
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.library_music),
-            label: 'Biblioteca',
+      bottomNavigationBar: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              border: Border(
+                top: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+              ),
+            ),
+            child: BottomNavigationBar(
+              currentIndex: _selectedIndex,
+              onTap: _onItemTapped,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              selectedItemColor: const Color(0xFFD500F9),
+              unselectedItemColor: Colors.white60,
+              type: BottomNavigationBarType.fixed,
+              items: const [
+                BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
+                BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.library_music),
+                  label: 'Biblioteca',
+                ),
+                BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Cuenta'),
+              ],
+            ),
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Cuenta'),
-        ],
+        ),
       ),
     );
   }

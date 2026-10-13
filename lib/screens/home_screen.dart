@@ -32,7 +32,7 @@ class HomeScreen extends StatelessWidget {
     final userName = _getUserDisplayName();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0B14),
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Stack(
           children: [
