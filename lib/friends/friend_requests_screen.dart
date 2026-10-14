@@ -31,7 +31,7 @@ class FriendRequestsScreen extends StatelessWidget {
                     .doc(fromUid)
                     .get(),
                 builder: (context, userSnap) {
-                  final name = userSnap.data?.data()?['displayName'] ?? fromUid;
+                  final name = userSnap.data?.data()?['name'] ?? fromUid;
                   return ListTile(
                     title: Text(name),
                     trailing: Row(

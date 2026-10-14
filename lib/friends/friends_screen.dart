@@ -1,12 +1,26 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../screens/public_profile_screen.dart';
+import '../screens/qr_profile_screen.dart';
+import '../screens/qr_scanner_screen.dart';
 import 'friend_requests_screen.dart';
 import 'friend_service.dart';
-import 'my_qr_screen.dart';
-import 'scan_qr_screen.dart';
 
 class FriendsScreen extends StatelessWidget {
   const FriendsScreen({super.key});
+
+  Future<void> _scan(BuildContext context) async {
+    final uid = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+    );
+    if (uid != null && context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => PublicProfileScreen(userId: uid)),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,16 +45,13 @@ class FriendsScreen extends StatelessWidget {
                   label: const Text('Mi QR'),
                   onPressed: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const MyQrScreen()),
+                    MaterialPageRoute(builder: (_) => const QrProfileScreen()),
                   ),
                 ),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.qr_code_scanner),
                   label: const Text('Escanear QR'),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ScanQrScreen()),
-                  ),
+                  onPressed: () => _scan(context),
                 ),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.person_add),
@@ -78,10 +89,18 @@ class FriendsScreen extends StatelessWidget {
                           .get(),
                       builder: (context, userSnap) {
                         final name =
-                            userSnap.data?.data()?['displayName'] ?? friendUid;
+                            userSnap.data?.data()?['name'] ?? friendUid;
                         return ListTile(
-                          leading: const CircleAvatar(child: Icon(Icons.person)),
+                          leading:
+                              const CircleAvatar(child: Icon(Icons.person)),
                           title: Text(name),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  PublicProfileScreen(userId: friendUid),
+                            ),
+                          ),
                         );
                       },
                     );

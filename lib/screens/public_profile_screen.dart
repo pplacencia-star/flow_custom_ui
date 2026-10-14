@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/social_service.dart';
 import '../widgets/nova_glass.dart';
 import 'saved_tracks_screen.dart';
+import '../friends/friend_button.dart';
 
 class PublicProfileScreen extends StatelessWidget {
   final String userId;
@@ -33,6 +34,8 @@ class PublicProfileScreen extends StatelessWidget {
                   onPressed: () async { try { await SocialService.setFollowing(userId, !yes); }
                     catch (e) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'))); } });
               }),
+                if (!isSelf) const SizedBox(height: 8),
+                if (!isSelf) FriendButton(userId: userId),
             ])),
             const SizedBox(height: 24),
             const Text('Playlists públicas', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),

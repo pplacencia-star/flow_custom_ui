@@ -5,6 +5,8 @@ import '../widgets/nova_glass.dart';
 import 'home_screen.dart';
 import 'search_screen.dart';
 import 'library_screen.dart';
+import '../friends/friends_screen.dart';
+import '../services/social_service.dart';
 import '../widgets/account_dialog.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -17,8 +19,14 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    SocialService.ensureProfile().catchError((_) {});
+  }
+
   void _onItemTapped(int index) {
-    if (index == 3) {
+    if (index == 4) {
       showDialog(context: context, builder: (context) => const AccountDialog());
     } else {
       setState(() {
@@ -33,6 +41,7 @@ class _MainNavigationState extends State<MainNavigation> {
       const HomeScreen(),
       const SearchScreen(),
       LibraryScreen(onOpenPlaylist: () {}, onOpenArtist: () {}),
+      const FriendsScreen(),
     ];
 
     return Scaffold(
@@ -65,6 +74,7 @@ class _MainNavigationState extends State<MainNavigation> {
             icon: Icon(Icons.library_music),
             label: 'Biblioteca',
           ),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Amigos'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Cuenta'),
         ],
       )),

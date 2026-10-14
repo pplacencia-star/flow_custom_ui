@@ -40,14 +40,14 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDpewGQwF0xaOlECewO-GWi6d1DK5VMmFg',
-    authDomain: 'music-nova-2164b.firebaseapp.com',
-    projectId: 'music-nova-2164b',
-    storageBucket: 'music-nova-2164b.firebasestorage.app',
-    messagingSenderId: '21226921183',
-    appId: '1:21226921183:web:a3ac649f68851faca2dd6a',
-    measurementId: 'G-GLJKHHX719',
+    static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyAx58dUDevH91c4_uSj1wfvV9vQLo6w1tA',
+    appId: '1:1012817964352:web:cf7266beba89047cd75ea5',
+    messagingSenderId: '1012817964352',
+    projectId: 'music-nova-pruebas',
+    authDomain: 'music-nova-pruebas.firebaseapp.com',
+    storageBucket: 'music-nova-pruebas.firebasestorage.app',
+    measurementId: 'G-28V67HBENC',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
